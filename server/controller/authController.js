@@ -1,46 +1,46 @@
 const User = require('../models/User');
 const generateToken = require('../utils/generateToken');
+const { sendResponse } = require('../utils/sendResponse');
+const asyncHandler=require('../middleware/asyncHandler');
+const AppError = require('../utils/AppError');
+
 module.exports={
-    loginUser: async (req, res) => {
-    try {
+    loginUser: asyncHandler (async(req, res,next) => {
+
         const { email, password } = req.body;
         const user = await User.findOne({ email }).select('+password');
 
         if (!user || !(await user.matchPassword(password))) {
-        return res.status(401).json({ message: 'Wrong password or email' });
+            throw new AppError('Wrong password or email', 401);
         }
 
         const token = generateToken(user._id);
 
-        res.json({
-        success: true,
-        data: {
+        sendResponse(res,
+          {
+            message: "Login successful", 
+            data: {
+            user:{
             _id: user._id,
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,
+            },
             token
-            }
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error', error: error.message });
-    }
-    },
-    registerUser: async (req, res) => {
-  try {
+          },
+          });
+        }),
+
+    registerUser: asyncHandler(async (req, res,next) => {
     const { firstName,lastName, email, password } = req.body;
 
      if (!firstName || !lastName || !email || !password) {
-                return res.status(400).json({
-                    success: false,
-                    message: "All fields required."
-                });
+                throw new AppError("Please provide all required fields", 400);
             }
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      return res.status(400).json({ message: 'This email is already in use' });
+      throw new AppError("This email is already in use", 400);
     }
 
     const user = await User.create({
@@ -52,36 +52,24 @@ module.exports={
 
     const token = generateToken(user._id);
 
-    res.status(201).json({
-      success: true,
-      message: "User created succesfully.",
-      data: {
+    sendResponse(res,
+      {
+        message: "User created succesfully.", 
+        data: {
+        user:{
         _id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        },
         token
-      }
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-},
-  logoutUser: (req, res) => {
-    try {
-      
-      res.status(200).json({
-        success: true,
-        message: "Logout successful. Please remove token on client."
-      });
+      },
+        statusCode:201});
 
-    } catch (error) {
-      console.log(error);
-      res.status(500).json({
-        success: false,
-        message: "Server error during logout"
-      });
-    }
+}),
+  logoutUser: (req, res) => {
+    return sendResponse(res, {
+      message: "Logout successful. Please remove token on client."
+    });
   }
 }

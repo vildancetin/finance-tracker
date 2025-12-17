@@ -1,68 +1,49 @@
 const User = require('../models/User');
+const { sendResponse } = require('../utils/sendResponse');
+const AppError = require('../utils/AppError');
+const asyncHandler = require('../middleware/asyncHandler');
 
 module.exports = {
-    list:async (req,res)=>{
-        try {
+    list:asyncHandler(async (req,res,next)=>{
+
             const users = await User.find().select('-password');
-
-            res.status(200).json({
-                success: true,
-                count: users.length,
-                data: users
+            sendResponse(res,
+              {
+                message:"Users fetched successfully",
+                data: {
+                    users,
+                    count: users.length
+                },
             });
-
-        } catch (error) {
-            res.status(500).json({ success: false, message: error.message });
-        }
-    },
-    read:async(req,res)=>{
-        try {
+    }),
+    read:asyncHandler(async(req,res,next)=>{
             const user = await User.findById(req.params.userId).select('-password');
 
             if (!user) {
-                return res.status(404).json({
-                    success: false,
-                    message: "User not found"
-                });
+                throw new AppError("User not found", 404);
             }
-
-            res.status(200).json({
-                success: true,
-                data: user
+            sendResponse(res,
+              {
+                message:"User fetched successfully",
+                data:user,
             });
-
-        } catch (error) {
-            res.status(500).json({ success: false, message: error.message });
-        }
-    },
-    getMe: async (req, res) => {
-    try {
+    }),
+    getMe: asyncHandler(async (req, res,next) => {
         const user = await User.findById(req.user._id).select("-password");
-
         if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found"
-            });
+            throw new AppError("User not found", 404);
         }
-
-        res.status(200).json({
-            success: true,
+        sendResponse(res,{
             data: {
         _id: user._id,
         name: user.name,
         email: user.email
-      }
-        });
-
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-},
-    update:async(req,res)=>{
-        try {
-            const updateData = req.body;
+      },
+      message: "User fetched successfully"
+        })
+}),
+    update: asyncHandler(async (req, res,next) => {
+        const updateData = req.body;
 
             const updatedUser = await User.findByIdAndUpdate(
                 req.params.userId,
@@ -71,42 +52,23 @@ module.exports = {
             ).select('-password');
 
             if (!updatedUser) {
-                return res.status(404).json({
-                    success: false,
-                    message: "User not found"
-                });
+                throw new AppError("User not found", 404);
             }
+           return sendResponse(res, {
+        message: "User updated successfully",
+        data: updatedUser,
+      });
+    }),
 
-            res.status(200).json({
-                success: true,
-                message: "User updated successfully",
-                data: updatedUser
-            });
-
-        } catch (error) {
-            res.status(500).json({ success: false, message: error.message });
-        }
-    },
-
-    delete:async(req,res)=>{
-        try {
-            const deletedUser = await User.findByIdAndDelete(req.params.userId);
+    delete: asyncHandler(async (req, res,next) => {
+        const deletedUser = await User.findByIdAndDelete(req.params.userId);
 
             if (!deletedUser) {
-                return res.status(404).json({
-                    success: false,
-                    message: "User not found"
-                });
+                throw new AppError("User not found", 404);
             }
-
-            res.status(200).json({
-                success: true,
-                message: "User deleted successfully"
-            });
-
-        } catch (error) {
-            res.status(500).json({ success: false, message: error.message });
-        }
-    }
-
+      return sendResponse(res, {
+        message: "User deleted successfully",
+        data: null,
+      });
+})
 }
