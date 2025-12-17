@@ -1,29 +1,25 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-const protect = async (req, res, next) => {
+const protect = asyncHandler(async (req, res, next) => {
   let token;
-
   if (
     req.headers.authorization &&
     req.headers.authorization.startsWith('Bearer')
   ) {
-    try {
       token = req.headers.authorization.split(' ')[1];
-
+  }
+  if (!token) {
+    throw new AppError('No token, authorization denied', 401);
+  }
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      req.user = await User.findById(decoded.id).select('-password');
+      const user = await User.findById(decoded.id).select('-password');
+      if (!user) {
+        throw new AppError('User not found', 401);
+      }
+      req.user = user;
       next();
-    } catch (error) {
-      console.error(error);
-      res.status(401).json({ message: 'Token geçersiz' });
-    }
-  }
-
-  if (!token) {
-    res.status(401).json({ message: 'Token yok, yetki yok' });
-  }
-};
+});
 
 module.exports = { protect };

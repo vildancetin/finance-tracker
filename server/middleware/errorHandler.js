@@ -1,11 +1,13 @@
-
+const { sendResponse } = require('../utils/sendResponse');
 module.exports = (err, req, res, next) => {
-    const errorStatusCode = res.errorStatusCode ?? 500
+    const statusCode = err.statusCode || 500;
+    const message = err.message || 'Something went wrong';
     console.log('errorHandler worked.')
-    res.status(errorStatusCode).send({
-        error: true, 
-        message: err.message, 
-        cause: err.cause, 
-
-    })
+    
+    return sendResponse(res, {
+    success: false,
+    message,
+    data: null,
+    statusCode
+  });
 }
